@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <metadata>
-    <name>BetterStart</name>
+    <name>[REP+] Better Start</name>
     <directory>betterstart</directory>
     <id>3392428661</id>
-    <description></description>
-    <version>1.1</version>
-    <visibility>Private</visibility>
+    <description>This mod combines the [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1264802784]Guaranteed Start[/url] and [url=https://steamcommunity.com/sharedfiles/filedetails/?id=1379926225]Item Room Start[/url] mods, while also including some additional fixes to address minor issues.
+
+At the beginning of each run, this mod will:
+[list]
+[*] Remove the Curse of the Blind, if applied.
+[*] Teleport you to the Treasure Room (or the Silver Treasure Room in Greed Mode).
+[*] Ensure the item found there is of at least quality 3.
+[/list]
+
+[url=https://github.com/naaskel/BetterStart]Source Code[/url]</description>
+    <version>1.3</version>
+    <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Tweaks"/>
 </metadata>
