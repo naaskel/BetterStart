@@ -1,7 +1,18 @@
-local mod = RegisterMod("Better Start", 1)
+local MOD_NAME = "Better Start"
 
-mod.state = {
-    firstItemUpgraded = false,
+local mod = RegisterMod(MOD_NAME, 1)
+local json = require("json")
+
+mod.data = {
+    settings = {
+        upgradeFirstItem = true,
+        teleportToTreasureRoom = true,
+        removeCurseOfBlind = true,
+    },
+    state = {
+        firstItemUpgraded = false,
+        modConfigInited = false,
+    }
 }
 
 --- @param game Game
@@ -77,36 +88,126 @@ local function teleportIsaacToDoor(game)
     player.Position = room:FindFreeTilePosition(door.Position, 0)
 end
 
+local function loadSettings()
+    if not mod:HasData() then
+        return
+    end
+
+    mod.data.settings = json.decode(mod:LoadData())
+end
+
+local function saveSettings()
+    mod:SaveData(json.encode(mod.data.settings))
+end
+
+local function modConfigMenuInit()
+    ModConfigMenu.AddSpace(MOD_NAME, "Settings")
+    ModConfigMenu.AddSetting(MOD_NAME, "Settings", {
+        Type = ModConfigMenu.OptionType.BOOLEAN,
+        CurrentSetting = function()
+            return mod.data.settings.upgradeFirstItem
+        end,
+        Display = function()
+            return "Upgrade first item: " .. (mod.data.settings.upgradeFirstItem and "on" or "off")
+        end,
+        OnChange = function(value)
+            mod.data.settings.upgradeFirstItem = value
+        end,
+        Info = {
+            "Should the first item you encounter",
+            "in the item room be upgraded?",
+        }
+    })
+    ModConfigMenu.AddSetting(MOD_NAME, "Settings", {
+        Type = ModConfigMenu.OptionType.BOOLEAN,
+        CurrentSetting = function()
+            return mod.data.settings.teleportToTreasureRoom
+        end,
+        Display = function()
+            return "Teleport to treasure room: " .. (mod.data.settings.teleportToTreasureRoom and "on" or "off")
+        end,
+        OnChange = function(value)
+            mod.data.settings.teleportToTreasureRoom = value
+        end,
+        Info = {
+            "Should Isaac be teleported to the",
+            "treasure room at the beginning of the run?",
+        }
+    })
+    ModConfigMenu.AddSetting(MOD_NAME, "Settings", {
+        Type = ModConfigMenu.OptionType.BOOLEAN,
+        CurrentSetting = function()
+            return mod.data.settings.removeCurseOfBlind
+        end,
+        Display = function()
+            return "Remove Curse of the Blind: " .. (mod.data.settings.removeCurseOfBlind and "on" or "off")
+        end,
+        OnChange = function(value)
+            mod.data.settings.removeCurseOfBlind = value
+        end,
+        Info = {
+            "Should Curse of the Blind be",
+            "removed on the first floor?",
+        }
+    })
+    ModConfigMenu.AddSpace(MOD_NAME, "About")
+    ModConfigMenu.AddText(MOD_NAME, "About", function()
+        return MOD_NAME .. " by naaskel"
+    end)
+
+    mod.data.state.modConfigInited = true
+end
+
 --- @param isContinued boolean
 function mod:PostGameStarted(isContinued)
+    if ModConfigMenu and mod.data.state.modConfigInited == false then
+        loadSettings()
+        modConfigMenuInit()
+
+        mod.data.state.modConfigInited = true
+    end
+
     if isContinued then
-        mod.state.firstItemUpgraded = true
+        mod.data.state.firstItemUpgraded = true
 
         return
     else
-        mod.state.firstItemUpgraded = false
+        mod.data.state.firstItemUpgraded = false
     end
 
     local game = Game()
     local level = game:GetLevel()
 
-    level:RemoveCurses(LevelCurse.CURSE_OF_BLIND)
-    teleportToTreasureRoom(game, level)
-    teleportIsaacToDoor(game)
+    if mod.data.settings.removeCurseOfBlind then
+        level:RemoveCurses(LevelCurse.CURSE_OF_BLIND)
+    end
+
+    if mod.data.settings.teleportToTreasureRoom then
+        teleportToTreasureRoom(game, level)
+        teleportIsaacToDoor(game)
+    end
 end
 
 --- @param itemPoolType ItemPoolType
 --- @param decrease boolean
 --- @param seed integer
 function mod:PreGetCollectible(itemPoolType, decrease, seed)
-    if mod.state.firstItemUpgraded then
+    if mod.data.state.firstItemUpgraded or mod.data.settings.upgradeFirstItem == false then
         return
     end
 
-    mod.state.firstItemUpgraded = true
+    mod.data.state.firstItemUpgraded = true
 
     return rollQualityItem(3, itemPoolType, RNG(seed))
 end
 
+--- @param shouldSave boolean
+function mod:PreGameExit(shouldSave)
+    if shouldSave then
+        saveSettings()
+    end
+end
+
 mod:AddCallback(ModCallbacks.MC_POST_GAME_STARTED, mod.PostGameStarted)
 mod:AddCallback(ModCallbacks.MC_PRE_GET_COLLECTIBLE, mod.PreGetCollectible)
+mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.PreGameExit)
